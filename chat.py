@@ -1,5 +1,6 @@
 import csv
 import re
+from collections import Counter
 
 with open('./_chat.txt') as f:
     content = f.readlines()
@@ -12,8 +13,6 @@ content = list(filter(None, content))
 index = 0
 while index < len(content):
     # If the len < 10 then there is no date. It can be resend message or continuation of prev mssg.
-    print(index)
-    print("len val:", len(content))
     if len(content[index]) < 10:
         print("Message is less than 10 chars", content[index])
     # Checking if the msg isn't previously send
@@ -38,8 +37,6 @@ while index < len(content):
             print("new string", content[index - 1])
             del (content[index])
             index -= 1
-        else:
-            print("Date is not none")
     index += 1
 
 date, time, name, message = [], [], [], []
@@ -50,7 +47,6 @@ for index, x in enumerate(content):
     colon = [y for y, z in enumerate(x) if z == ':']
     time.append(x[12:colon[2]])
     # Create list of names
-    print("index ", index)
     if (len(colon) >= 4):
         name.append(x[colon[2] + 2:colon[3]])
         # Create list of messages
@@ -66,3 +62,9 @@ with open('output.csv', 'w', newline='') as fp:
     for index, _ in enumerate(content):
         data = (date[index], time[index], name[index], message[index])
         a.writerows([data])
+
+# Prints messages per participants
+participants = Counter(name)
+for keys in participants.keys():
+    print(keys, participants.get(keys), round((participants.get(keys) / len(name) * 100), 2), '%')
+
