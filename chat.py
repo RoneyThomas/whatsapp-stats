@@ -2,14 +2,11 @@ import csv
 import re
 from collections import Counter
 
-with open('./_chat.txt') as f:
-    content = f.readlines()
-# you may also want to remove whitespace characters like `\n` at the end of each line
-content = [x.strip() for x in content]
-# Remove empty strings
-content = list(filter(None, content))
-# find messages without date and merge with prev messages
+with open('./_chat1.txt') as f:
+    # Strips 'n' and only returns non empty lines
+    content = [x.strip() for x in f.readlines() if x != '\n']
 
+# find messages without date and merge with prev messages
 index = 0
 while index < len(content):
     # If the len < 10 then there is no date. It can be resend message or continuation of prev mssg.
@@ -32,9 +29,9 @@ while index < len(content):
         date = re.fullmatch(r'\d{4}-\d{2}-\d{2}', content[index][0:10])
         # Checking messages without date. If found merge with prev mssg
         if date is None:
-            print("Found prev message ", content[index])
+            # print("Found prev message ", content[index])
             content[index - 1] += " " + content[index]
-            print("new string", content[index - 1])
+            # print("new string", content[index - 1])
             del (content[index])
             index -= 1
     index += 1
