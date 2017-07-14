@@ -1,67 +1,74 @@
-import csv
-import re
-from collections import Counter
+import datetime
+import pandas as pd
 
-with open('./_chat1.txt') as f:
-    # Strips 'n' and only returns non empty lines
-    content = [x.strip() for x in f.readlines() if x != '\n']
 
-# find messages without date and merge with prev messages
-index = 0
-while index < len(content):
-    # If the len < 10 then there is no date. It can be resend message or continuation of prev mssg.
-    if len(content[index]) < 10:
-        print("Message is less than 10 chars", content[index])
-    # Checking if the msg isn't previously send
-    elif content[index][0] == "[":
-        print("found msg that is a resend")
-        del (content[index])
-        index -= 1
-    # Whatsapp msg when encryption changes
-    # Encrypted msg is delete. To be stored later
-    elif content[index].find(
-            '‎Messages you send to this chat and calls are now secured with end-to-end encryption.') != -1:
-        print("Encryption notice")
-        del (content[index])
-        index -= 1
-    # Check if any msgs start with date
-    else:
-        date = re.fullmatch(r'\d{4}-\d{2}-\d{2}', content[index][0:10])
-        # Checking messages without date. If found merge with prev mssg
-        if date is None:
-            # print("Found prev message ", content[index])
-            content[index - 1] += " " + content[index]
-            # print("new string", content[index - 1])
-            del (content[index])
-            index -= 1
-    index += 1
+class Chat:
+    def __init__(self, path):
+        with open(path) as f:
+            # Strips 'n' and only returns non empty lines
+            self.__content = [x.strip() for x in f.readlines()]
 
-date, time, name, message = [], [], [], []
-for index, x in enumerate(content):
-    # Create list of dates
-    date.append(x[0:10])
-    # Create list of times
-    colon = [y for y, z in enumerate(x) if z == ':']
-    time.append(x[12:colon[2]])
-    # Create list of names
-    if (len(colon) >= 4):
-        name.append(x[colon[2] + 2:colon[3]])
-        # Create list of messages
-        message.append(x[colon[2] + 2:])
-    else:
-        # If colon is less than 4
-        print(len(colon), x)
-print(len(date), len(time), len(name), len(message))
+        self.__content[0].split(', ')
+        self.__msg, self.__ws_notices = [], []
+        self.__index = 0
 
-# Outputs to CSV file
-with open('output.csv', 'w', newline='') as fp:
-    a = csv.writer(fp, delimiter=',')
-    for index, _ in enumerate(content):
-        data = (date[index], time[index], name[index], message[index])
-        a.writerows([data])
+        # Function to append a multiple line chat to single line
+        # 7/9/17, 7:37 PM - Shibu Thomas: Total expence at costco after deduction of carrot & cucumber( $11) =$89
+        # Brancroft Home Hardware =$31
+        # Becomes
+        # 7/9/17, 7:37 PM - Shibu Thomas: Total expence at costco after deduction of carrot & cucumber( $11) =$89\nBrancroft Home Hardware =$31
+        def append_to_prev_msg():
+            # global index, content
+            self.__content[self.__index - 1] += '\n' + self.__content[self.__index]
+            del self.__content[self.__index]
+            self.__index -= 1
 
-# Prints messages per participants
-participants = Counter(name)
-for keys in participants.keys():
-    print(keys, participants.get(keys), round((participants.get(keys) / len(name) * 100), 2), '%')
+        while self.__index < len(self.__content):
+            #     print(index, len(content))
+            # Some of the elements are just blank lines.
+            # Which we remove from our list and append them to the previous element
+            # 7/9/17, 6:41 PM - Anish: My expenses:
+            #
+            # Camp site booking: $535.
+            # Additional Parking: $22
+            # Fire wood: $7
+            # Becomes
+            # 7/9/17, 6:41 PM - Anish: My expenses:
+            # Camp site booking: $535.
+            # Additional Parking: $22
+            # Fire wood: $7
+            if not self.__content[self.__index]:
+                append_to_prev_msg()
+            elif self.__content[self.__index][0] == "[":
+                print("found msg that is a resend")
+            else:
+                try:
+                    # Parse date and time
+                    # 7/9/17, 11:33 AM - Diana Susan: Hi iam here
+                    # Split the string and taking the first element in list which will be date
+                    # See if we can parse the date.
+                    # Value error arrises becuase the message doesn't have date
+                    temp = self.__content[self.__index].split(' - ')
+                    date = datetime.datetime.strptime(temp[0], "%d/%m/%y, %I:%M %p")
 
+                    # Parse Name
+                    # 7/9/17, 11:33 AM - Diana Susan: Hi iam here
+                    # Split and take the first element should be name
+
+                    # Check if a its a whatsapp notice
+                    # 7/9/17, 12:30 PM - Messages to this group are now secured with end-to-end encryption. Tap for more info.
+                    # 7/9/17, 12:30 PM - Jhon added Nikhil
+                    # 7/11/17, 3:08 PM - Manju Joseph changed this group's icon
+                    temp = temp[1].split(':')
+                    if len(temp) is 1:
+                        self.__ws_notices.append({'date': date, 'message': temp[0]})
+                    else:
+                        self.__msg.append({'date': date, 'name': temp[0], 'message': temp[1]})
+                        #                 print({'date':date,'name': temp[0],'message':temp[1]})
+                except ValueError:
+                    print("ValueError", self.__index)
+                    append_to_prev_msg()
+            self.__index += 1
+
+    def df(self):
+        return pd.DataFrame(self.__content), pd.DataFrame(self.__ws_notices)
