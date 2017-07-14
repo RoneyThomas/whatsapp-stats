@@ -3,7 +3,7 @@ import pandas as pd
 
 
 class Chat:
-    def __init__(self, path):
+    def __init__(self, path: str):
         with open(path) as f:
             # Strips 'n' and only returns non empty lines
             self.__content = [x.strip() for x in f.readlines()]
@@ -70,5 +70,5 @@ class Chat:
                     append_to_prev_msg()
             self.__index += 1
 
-    def df(self):
+    def df(self) -> (pd.DataFrame, pd.DataFrame):
         return pd.DataFrame(self.__content), pd.DataFrame(self.__ws_notices)
